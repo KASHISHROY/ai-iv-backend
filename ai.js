@@ -61,6 +61,7 @@ export const evaluateAnswer = async (
     : 0
 
   const prompt = `You are an AI interview evaluator at ${company}.
+
 Evaluate the candidate based on TWO things:
 1. Answer quality
 2. Behavioral signals
@@ -85,20 +86,20 @@ BEHAVIORAL ANALYSIS RULES:
 - Answer below 20 words means incomplete or nervous
 - Time above 120 seconds means overthinking
 
-You MUST respond ONLY with this exact JSON and nothing else.
-Do not add any text before or after the JSON.
-Do not add markdown or code blocks.
+IMPORTANT: You MUST respond with ONLY the JSON below.
+No extra text. No markdown. No code blocks. Just the raw JSON.
 
 {
   "score": 7,
-  "feedback": "your feedback on answer quality here",
+  "feedback": "write your answer quality feedback here",
   "confidence_level": "High",
-  "behavior_analysis": "your behavioral analysis here",
-  "improvement_tip": "one specific tip here"
+  "behavior_analysis": "write your behavioral analysis here",
+  "improvement_tip": "write one specific tip here"
 }`
 
   const text = await ask(prompt, 800)
-  console.log('AI RAW RESPONSE:', text)
+  console.log('RAW AI RESPONSE:', text)
+
   const jsonMatch = text.match(/\{[\s\S]*\}/)
   if (!jsonMatch) throw new Error('Invalid AI response')
   return JSON.parse(jsonMatch[0])
