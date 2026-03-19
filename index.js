@@ -36,10 +36,12 @@ app.post('/submit-answer', async (req, res) => {
       currentDifficulty,
       timeTaken,
       keystrokes,
-      backspaces
+      backspaces,
+      isFollowUp
     } = req.body
 
-    console.log('Behavioral data received:', { timeTaken, keystrokes, backspaces })
+    console.log('Behavioral data:', { timeTaken, keystrokes, backspaces })
+    console.log('Is follow-up:', isFollowUp)
 
     const evaluation = await evaluateAnswer(
       question,
@@ -50,18 +52,39 @@ app.post('/submit-answer', async (req, res) => {
       backspaces || 0
     )
 
-    console.log('Evaluation result:', evaluation)
+    console.log('Evaluation:', evaluation)
 
+    // Adaptive difficulty
     let nextDifficulty = currentDifficulty
     if (evaluation.score < 4) nextDifficulty = Math.max(1, currentDifficulty - 1)
     else if (evaluation.score > 7) nextDifficulty = Math.min(10, currentDifficulty + 1)
 
-    const nextQuestion = await generateQuestion(
-      company,
-      nextDifficulty,
-      'mixed',
-      previousQuestions
-    )
+    // Smart next question logic
+    let nextQuestion
+    if (isFollowUp || evaluation.score === 10) {
+      // Was already a follow-up OR perfect score → fresh question
+      nextQuestion = await generateQuestion(
+        company,
+        nextDifficulty,
+        'mixed',
+        previousQuestions
+      )
+    } else if (evaluation.follow_up_question) {
+      // First answer → use follow-up as next question
+      nextQuestion = {
+        question: evaluation.follow_up_question,
+        type: 'follow-up',
+        difficulty: nextDifficulty
+      }
+    } else {
+      // No follow-up → fresh question
+      nextQuestion = await generateQuestion(
+        company,
+        nextDifficulty,
+        'mixed',
+        previousQuestions
+      )
+    }
 
     res.json({
       success: true,

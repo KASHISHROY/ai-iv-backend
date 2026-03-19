@@ -86,18 +86,31 @@ BEHAVIORAL ANALYSIS RULES:
 - Answer below 20 words means incomplete or nervous
 - Time above 120 seconds means overthinking
 
+FOLLOW-UP QUESTION RULES:
+- Look at the improvement_tip you just wrote
+- The follow_up_question MUST be a direct question asking the candidate to act on that tip
+- Examples:
+  * If tip says "provide pseudo-code" → ask "Can you walk me through the pseudo-code for this?"
+  * If tip says "explain time complexity" → ask "What is the time and space complexity of your solution?"
+  * If tip says "give an example" → ask "Can you trace through your algorithm with a concrete example?"
+  * If tip says "handle edge cases" → ask "How would your solution handle edge cases like empty arrays?"
+- The follow-up must feel like a natural continuation of the conversation
+- Never ask something unrelated to what the candidate just said
+- If score is 10, set follow_up_question to empty string ""
+
 IMPORTANT: You MUST respond with ONLY the JSON below.
-No extra text. No markdown. No code blocks. Just the raw JSON.
+No extra text. No markdown. No code blocks. Just raw JSON.
 
 {
   "score": 7,
   "feedback": "write your answer quality feedback here",
   "confidence_level": "High",
   "behavior_analysis": "write your behavioral analysis here",
-  "improvement_tip": "write one specific tip here"
+  "improvement_tip": "write one specific tip here",
+  "follow_up_question": "write ONE specific follow-up question directly based on the improvement tip"
 }`
 
-  const text = await ask(prompt, 800)
+  const text = await ask(prompt, 1000)
   console.log('RAW AI RESPONSE:', text)
 
   const jsonMatch = text.match(/\{[\s\S]*\}/)
