@@ -11,12 +11,10 @@ const PORT = process.env.PORT || 5000
 app.use(cors())
 app.use(express.json())
 
-// Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', message: 'AI Interview backend is running!' })
 })
 
-// Start interview - get first question
 app.post('/start-interview', async (req, res) => {
   try {
     const { company, topic } = req.body
@@ -28,20 +26,36 @@ app.post('/start-interview', async (req, res) => {
   }
 })
 
-// Submit answer - get evaluation + next question
 app.post('/submit-answer', async (req, res) => {
   try {
-    const { question, answer, company, previousQuestions, currentDifficulty } = req.body
+    const {
+      question,
+      answer,
+      company,
+      previousQuestions,
+      currentDifficulty,
+      timeTaken,
+      keystrokes,
+      backspaces
+    } = req.body
 
-    // Evaluate the answer
-    const evaluation = await evaluateAnswer(question, answer, company)
+    console.log('Behavioral data received:', { timeTaken, keystrokes, backspaces })
 
-    // Adaptive difficulty
+    const evaluation = await evaluateAnswer(
+      question,
+      answer,
+      company,
+      timeTaken || 0,
+      keystrokes || 0,
+      backspaces || 0
+    )
+
+    console.log('Evaluation result:', evaluation)
+
     let nextDifficulty = currentDifficulty
     if (evaluation.score < 4) nextDifficulty = Math.max(1, currentDifficulty - 1)
     else if (evaluation.score > 7) nextDifficulty = Math.min(10, currentDifficulty + 1)
 
-    // Get next question
     const nextQuestion = await generateQuestion(
       company,
       nextDifficulty,

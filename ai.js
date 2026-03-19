@@ -5,7 +5,7 @@ dotenv.config()
 
 const client = new Groq({ apiKey: process.env.GROQ_API_KEY })
 
-const ask = async (prompt, maxTokens = 600) => {
+const ask = async (prompt, maxTokens = 800) => {
   const message = await client.chat.completions.create({
     model: 'llama-3.3-70b-versatile',
     max_tokens: maxTokens,
@@ -37,29 +37,68 @@ Respond ONLY in this exact JSON format, nothing else:
 }`
 
   const text = await ask(prompt, 500)
-  
   const jsonMatch = text.match(/\{[\s\S]*\}/)
   if (!jsonMatch) throw new Error('Invalid AI response')
   return JSON.parse(jsonMatch[0])
 }
 
-export const evaluateAnswer = async (question, answer, company) => {
-  const prompt = `You are a strict but fair ${company} interviewer evaluating a candidate's answer.
+export const evaluateAnswer = async (
+  question,
+  answer,
+  company,
+  timeTaken = 0,
+  keystrokes = 0,
+  backspaces = 0
+) => {
+  const backspaceRatio = keystrokes > 0
+    ? ((backspaces / keystrokes) * 100).toFixed(1)
+    : 0
 
-Question: ${question}
-Candidate's Answer: ${answer}
+  const wordsTyped = answer.trim().split(' ').length
 
-Evaluate and respond ONLY in this exact JSON format, nothing else:
+  const typingSpeed = timeTaken > 0
+    ? (wordsTyped / timeTaken * 60).toFixed(1)
+    : 0
+
+  const prompt = `You are an AI interview evaluator at ${company}.
+Evaluate the candidate based on TWO things:
+1. Answer quality
+2. Behavioral signals
+
+INPUT:
+- Question: ${question}
+- Answer: ${answer}
+- Time taken: ${timeTaken} seconds
+- Total keystrokes: ${keystrokes}
+- Backspaces used: ${backspaces}
+- Backspace ratio: ${backspaceRatio}% of keystrokes were deletions
+- Typing speed: ${typingSpeed} words per minute
+- Words in answer: ${wordsTyped}
+
+BEHAVIORAL ANALYSIS RULES:
+- Backspace ratio above 30 percent means low confidence
+- Backspace ratio 10 to 30 percent means medium confidence
+- Backspace ratio below 10 percent means high confidence
+- Typing speed below 20 wpm means hesitation
+- Typing speed 20 to 50 wpm means normal
+- Typing speed above 50 wpm means confident
+- Answer below 20 words means incomplete or nervous
+- Time above 120 seconds means overthinking
+
+You MUST respond ONLY with this exact JSON and nothing else.
+Do not add any text before or after the JSON.
+Do not add markdown or code blocks.
+
 {
   "score": 7,
-  "strengths": ["strength1", "strength2"],
-  "weaknesses": ["weakness1", "weakness2"],
-  "improvement": "specific advice here",
-  "followUpQuestion": "one follow-up question here"
+  "feedback": "your feedback on answer quality here",
+  "confidence_level": "High",
+  "behavior_analysis": "your behavioral analysis here",
+  "improvement_tip": "one specific tip here"
 }`
 
-  const text = await ask(prompt, 600)
-  
+  const text = await ask(prompt, 800)
+  console.log('AI RAW RESPONSE:', text)
   const jsonMatch = text.match(/\{[\s\S]*\}/)
   if (!jsonMatch) throw new Error('Invalid AI response')
   return JSON.parse(jsonMatch[0])
