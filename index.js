@@ -1,7 +1,13 @@
 import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
-import { generateQuestion, evaluateAnswer } from './ai.js'
+import {
+  generateQuestion,
+  evaluateAnswer,
+  generateCodingQuestion,
+  evaluateCode,
+  getHint
+} from './ai.js'
 
 dotenv.config()
 
@@ -40,9 +46,6 @@ app.post('/submit-answer', async (req, res) => {
       isFollowUp
     } = req.body
 
-    console.log('Behavioral data:', { timeTaken, keystrokes, backspaces })
-    console.log('Is follow-up:', isFollowUp)
-
     const evaluation = await evaluateAnswer(
       question,
       answer,
@@ -52,17 +55,12 @@ app.post('/submit-answer', async (req, res) => {
       backspaces || 0
     )
 
-    console.log('Evaluation:', evaluation)
-
-    // Adaptive difficulty
     let nextDifficulty = currentDifficulty
     if (evaluation.score < 4) nextDifficulty = Math.max(1, currentDifficulty - 1)
     else if (evaluation.score > 7) nextDifficulty = Math.min(10, currentDifficulty + 1)
 
-    // Smart next question logic
     let nextQuestion
     if (isFollowUp || evaluation.score === 10) {
-      // Was already a follow-up OR perfect score → fresh question
       nextQuestion = await generateQuestion(
         company,
         nextDifficulty,
@@ -70,14 +68,12 @@ app.post('/submit-answer', async (req, res) => {
         previousQuestions
       )
     } else if (evaluation.follow_up_question) {
-      // First answer → use follow-up as next question
       nextQuestion = {
         question: evaluation.follow_up_question,
         type: 'follow-up',
         difficulty: nextDifficulty
       }
     } else {
-      // No follow-up → fresh question
       nextQuestion = await generateQuestion(
         company,
         nextDifficulty,
@@ -86,12 +82,46 @@ app.post('/submit-answer', async (req, res) => {
       )
     }
 
-    res.json({
-      success: true,
-      evaluation,
-      nextQuestion,
-      nextDifficulty
-    })
+    res.json({ success: true, evaluation, nextQuestion, nextDifficulty })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
+app.post('/coding-question', async (req, res) => {
+  try {
+    const { company, difficulty } = req.body
+    const question = await generateCodingQuestion(company, difficulty)
+    res.json({ success: true, question })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
+app.post('/evaluate-code', async (req, res) => {
+  try {
+    const { question, code, language, company, testCases } = req.body
+    const evaluation = await evaluateCode(
+      question,
+      code,
+      language,
+      company,
+      testCases || []
+    )
+    res.json({ success: true, evaluation })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
+app.post('/get-hint', async (req, res) => {
+  try {
+    const { question, code, hintNumber } = req.body
+    const hint = await getHint(question, code, hintNumber)
+    res.json({ success: true, hint })
   } catch (err) {
     console.error(err)
     res.status(500).json({ success: false, error: err.message })
